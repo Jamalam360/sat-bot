@@ -1,0 +1,105 @@
+use serde::{Deserialize, Serialize};
+
+use crate::{database::Location, util};
+
+pub struct N2YOAPI {
+    api_key: String,
+    client: reqwest::Client,
+}
+
+impl N2YOAPI {
+    pub fn new() -> anyhow::Result<Self> {
+        Ok(Self {
+            api_key: util::env("N2YO_KEY")?,
+            client: reqwest::ClientBuilder::new()
+                .user_agent("sat-bot (james@jamalam.tech)")
+                .build()?,
+        })
+    }
+
+    pub async fn get_satellite_passes(
+        &self,
+        satellite_id: usize,
+        location: &Location,
+        days: usize,
+        min_max_elevation: f64,
+    ) -> anyhow::Result<SatellitePasses> {
+        let url = format!(
+            "https://api.n2yo.com/rest/v1/satellite/radiopasses/{}/{}/{}/{}/{}/{}&apiKey={}",
+            satellite_id,
+            location.latitude,
+            location.longitude,
+            location.altitude,
+            days,
+            min_max_elevation,
+            self.api_key
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .json::<SatellitePasses>()
+            .await?;
+        Ok(response)
+    }
+
+    pub async fn get_name_from_norad_id(&self, satellite_id: usize) -> anyhow::Result<String> {
+        let url = format!(
+            "https://api.n2yo.com/rest/v1/satellite/radiopasses/{}/{}/{}/{}/{}/{}&apiKey={}",
+            satellite_id, 12.0, 12.0, 12.0, 12, 1, self.api_key
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await?
+            .json::<SatellitePasses>()
+            .await?;
+        Ok(response.info.name.clone())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SatellitePasses {
+    pub info: SatellitePassInfo,
+    pub passes: Vec<SatellitePass>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SatellitePassInfo {
+    #[serde(rename = "satid")]
+    pub id: usize,
+    #[serde(rename = "satname")]
+    pub name: String,
+    #[serde(rename = "transactionscount")]
+    pub transaction_count: usize,
+    #[serde(rename = "passescount")]
+    pub passes_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SatellitePass {
+    #[serde(rename = "startAz")]
+    pub start_azimuth: f64,
+    #[serde(rename = "startAzCompass")]
+    pub start_azimuth_compass: String,
+    #[serde(rename = "startUTC")]
+    pub start_utc: usize,
+    #[serde(rename = "maxAz")]
+    pub max_azimuth: f64,
+    #[serde(rename = "maxAzCompass")]
+    pub max_azimuth_compass: String,
+    #[serde(rename = "maxEl")]
+    pub max_elevation: f64,
+    #[serde(rename = "maxUTC")]
+    pub max_utc: usize,
+    #[serde(rename = "endAz")]
+    pub end_azimuth: f64,
+    #[serde(rename = "endAzCompass")]
+    pub end_azimuth_compass: String,
+    #[serde(rename = "endUTC")]
+    pub end_utc: usize,
+}
