@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::{database::Location, util};
 
@@ -9,6 +10,7 @@ pub struct N2YOAPI {
 
 impl N2YOAPI {
     pub fn new() -> anyhow::Result<Self> {
+        info!("Creating N2YO API client");
         Ok(Self {
             api_key: util::env("N2YO_KEY")?,
             client: reqwest::ClientBuilder::new()
@@ -35,6 +37,8 @@ impl N2YOAPI {
             self.api_key
         );
 
+        info!("Sending request to {}", url);
+
         let response = self
             .client
             .get(&url)
@@ -50,6 +54,8 @@ impl N2YOAPI {
             "https://api.n2yo.com/rest/v1/satellite/radiopasses/{}/{}/{}/{}/{}/{}&apiKey={}",
             satellite_id, 12.0, 12.0, 12.0, 12, 1, self.api_key
         );
+
+        info!("Sending request to {}", url);
 
         let response = self
             .client

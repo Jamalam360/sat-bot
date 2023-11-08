@@ -2,8 +2,10 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 use chrono::FixedOffset;
+use tracing::info;
 
 pub fn load_env_file() -> anyhow::Result<()> {
+    info!("Loading .env file");
     let path = PathBuf::from(".env");
 
     if path.exists() {
