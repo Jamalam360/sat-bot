@@ -32,7 +32,7 @@ pub fn utc_to_local(locale: &str, utc: i64) -> String {
     let local = chrono::DateTime::from_timestamp(utc, 0)
         .unwrap()
         .with_timezone(&locale_to_timezone(locale));
-    local.format("%d/%m/%Y %H:%M").to_string()
+    local.format("%H:%M").to_string()
 }
 
 /// Imperfect, but good enough for my usecase.
@@ -44,6 +44,21 @@ fn locale_to_timezone(locale: &str) -> FixedOffset {
         _ => chrono::FixedOffset::east_opt(0),
     }
     .unwrap()
+}
+
+pub fn format_pass_time(locale: &str, start: i64, end: i64) -> String {
+    let start_timestamp = chrono::DateTime::from_timestamp(start, 0)
+        .unwrap()
+        .with_timezone(&locale_to_timezone(locale));
+
+    format!(
+        "{} {} {} - {} ({})",
+        start_timestamp.format("%A"),
+        start_timestamp.format("%d/%m/%y"),
+        utc_to_local(locale, start),
+        utc_to_local(locale, end),
+        duration_between(start, end)
+    )
 }
 
 pub fn duration_between(a: i64, b: i64) -> String {

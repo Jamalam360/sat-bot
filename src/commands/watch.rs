@@ -223,7 +223,7 @@ pub async fn notify_of_new_passes(
             )
             .await?;
 
-        if passes.passes.len() == 0 {
+        if passes.passes.is_empty() {
             continue;
         }
 
@@ -255,10 +255,12 @@ pub async fn notify_of_new_passes(
                     ));
 
                     e.description(format!(
-                        "{} - {} ({})\nMax Elevation: {}°",
-                        util::utc_to_local(&watched_satellite.locale, pass.start_utc as i64),
-                        util::utc_to_local(&watched_satellite.locale, pass.end_utc as i64),
-                        util::duration_between(pass.start_utc as i64, pass.end_utc as i64),
+                        "{}\nMax Elevation: {}°",
+                        util::format_pass_time(
+                            &watched_satellite.locale,
+                            pass.start_utc as i64,
+                            pass.end_utc as i64
+                        ),
                         pass.max_elevation
                     ));
                     e
@@ -286,24 +288,22 @@ pub async fn notify_of_new_passes(
             .push((successful.1, successful.2));
     }
 
-    let current_utc = util::current_utc();
     database
         .contents
         .watched_satellites
         .iter_mut()
         .for_each(|ws| {
-            ws.previous_notifications = ws
-                .previous_notifications
-                .iter()
-                .filter(|(start, end)| {
-                    current_utc - 24 * 60 * 60 < *start as i64
-                        && current_utc - 24 * 60 * 60 < *end as i64
-                })
-                .cloned()
-                .collect();
+            ws.previous_notifications.retain(|(start, end)| {
+                !has_more_than_one_day_passed(*start as i64)
+                    && !has_more_than_one_day_passed(*end as i64)
+            });
         });
 
     database.save()?;
 
     Ok(())
+}
+
+fn has_more_than_one_day_passed(since: i64) -> bool {
+    util::current_utc() - since > 24 * 60 * 60
 }

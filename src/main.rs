@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
                 commands::unwatch_satellite(),
                 commands::update_watched_satellites(),
             ],
-            on_error: on_error,
+            on_error,
             ..Default::default()
         })
         .token(util::env("DISCORD_TOKEN")?)

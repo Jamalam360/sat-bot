@@ -17,11 +17,10 @@ pub fn embed_passes(ctx: &Context<'_>, e: &mut CreateEmbed, passes: SatellitePas
     ));
     e.fields(passes.passes.iter().map(|pass| {
         (
-            format!(
-                "{} - {} ({})",
-                util::utc_to_local(ctx.locale().unwrap_or("en-GB"), pass.start_utc as i64),
-                util::utc_to_local(ctx.locale().unwrap_or("en-GB"), pass.end_utc as i64),
-                util::duration_between(pass.start_utc as i64, pass.end_utc as i64)
+            util::format_pass_time(
+                ctx.locale().unwrap_or("en-GB"),
+                pass.start_utc as i64,
+                pass.end_utc as i64,
             ),
             format!("Max Elevation: {}°", pass.max_elevation),
             false,
