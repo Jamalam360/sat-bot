@@ -222,6 +222,11 @@ pub async fn notify_of_new_passes(
                 watched_satellite.min_max_elevation,
             )
             .await?;
+
+        if passes.passes.len() == 0 {
+            continue;
+        }
+
         let mut b = CreateMessage::default();
 
         for pass in passes.passes.iter() {
@@ -229,7 +234,10 @@ pub async fn notify_of_new_passes(
                 if watched_satellite
                     .previous_notifications
                     .iter()
-                    .any(|(start, end)| util::are_within_10_seconds(*start as i64, pass.start_utc as i64) && util::are_within_10_seconds(*end as i64, pass.end_utc as i64))
+                    .any(|(start, end)| {
+                        util::are_within_10_seconds(*start as i64, pass.start_utc as i64)
+                            && util::are_within_10_seconds(*end as i64, pass.end_utc as i64)
+                    })
                 {
                     continue;
                 } else {
@@ -258,16 +266,13 @@ pub async fn notify_of_new_passes(
             }
         }
 
-        if !passes.passes.is_empty() {
-            let mut map = serde_json::Map::new();
-
-            for (key, value) in b.0 {
-                map.insert(key.to_string(), value);
-            }
-
-            http.send_message(watched_satellite.channel.0, &Value::Object(map))
-                .await?;
+        let mut map = serde_json::Map::new();
+        for (key, value) in b.0 {
+            map.insert(key.to_string(), value);
         }
+
+        http.send_message(watched_satellite.channel.0, &Value::Object(map))
+            .await?;
     }
 
     for successful in successful_notifications.iter() {
@@ -280,6 +285,23 @@ pub async fn notify_of_new_passes(
             .previous_notifications
             .push((successful.1, successful.2));
     }
+
+    let current_utc = util::current_utc();
+    database
+        .contents
+        .watched_satellites
+        .iter_mut()
+        .for_each(|ws| {
+            ws.previous_notifications = ws
+                .previous_notifications
+                .iter()
+                .filter(|(start, end)| {
+                    current_utc - 24 * 60 * 60 < *start as i64
+                        && current_utc - 24 * 60 * 60 < *end as i64
+                })
+                .cloned()
+                .collect();
+        });
 
     database.save()?;
 
