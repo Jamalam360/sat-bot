@@ -206,7 +206,7 @@ pub async fn notify_of_new_passes(
     n2yo_api: &Arc<N2YOAPI>,
 ) -> anyhow::Result<()> {
     let mut successful_notifications = Vec::new();
-    let database = database.write().await;
+    let mut database = database.write().await;
 
     for watched_satellite in database.contents.watched_satellites.iter() {
         let passes = n2yo_api
@@ -269,10 +269,6 @@ pub async fn notify_of_new_passes(
                 .await?;
         }
     }
-
-    // Bored of borrow checker for now.
-    drop(database);
-    let mut database = Database::open()?;
 
     for successful in successful_notifications.iter() {
         database
