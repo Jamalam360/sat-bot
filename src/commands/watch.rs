@@ -229,7 +229,7 @@ pub async fn notify_of_new_passes(
                 if watched_satellite
                     .previous_notifications
                     .iter()
-                    .any(|(start, end)| *start == pass.start_utc && *end == pass.end_utc)
+                    .any(|(start, end)| util::are_within_10_seconds(*start as i64, pass.start_utc as i64) && util::are_within_10_seconds(*end as i64, pass.end_utc as i64))
                 {
                     continue;
                 } else {

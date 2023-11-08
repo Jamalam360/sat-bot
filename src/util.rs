@@ -55,3 +55,8 @@ pub fn duration_between(a: i64, b: i64) -> String {
 
     format!("{}m {}s", minutes, seconds)
 }
+
+pub fn are_within_10_seconds(a: i64, b: i64) -> bool {
+    let duration = chrono::Duration::seconds(b - a);
+    duration.num_seconds().abs() < 10
+}
