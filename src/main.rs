@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let http = framework.client().cache_and_http.http.clone();
 
     spawn(async move {
-        let mut interval = interval(Duration::from_secs(60 * 60 * 30));
+        let mut interval = interval(Duration::from_secs(60 * 30));
 
         loop {
             info!("Waiting for next interval");
