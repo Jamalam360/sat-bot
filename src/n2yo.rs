@@ -44,9 +44,9 @@ impl N2YOAPI {
             .get(&url)
             .send()
             .await?
-            .json::<SatellitePasses>()
+            .json::<JsonSatellitePasses>()
             .await?;
-        Ok(response)
+        Ok(response.into())
     }
 
     pub async fn get_name_from_norad_id(&self, satellite_id: usize) -> anyhow::Result<String> {
@@ -62,16 +62,31 @@ impl N2YOAPI {
             .get(&url)
             .send()
             .await?
-            .json::<SatellitePasses>()
+            .json::<JsonSatellitePasses>()
             .await?;
         Ok(response.info.name.clone())
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct SatellitePasses {
     pub info: SatellitePassInfo,
     pub passes: Vec<SatellitePass>,
+}
+
+impl From<JsonSatellitePasses> for SatellitePasses {
+    fn from(json: JsonSatellitePasses) -> Self {
+        Self {
+            info: json.info,
+            passes: json.passes.unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct JsonSatellitePasses {
+    info: SatellitePassInfo,
+    passes: Option<Vec<SatellitePass>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
