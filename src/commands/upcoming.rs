@@ -128,25 +128,31 @@ pub async fn get_upcoming_noaa_passes(
         .await?;
         return Ok(());
     }
-    
+
     ctx.send(|b| {
-        b.embed(|e| {
-            embed_passes(&ctx, e, noaa_15_passes, days);
-            e
-        })
-        .ephemeral(false);
+        if !noaa_15_passes.passes.is_empty() {
+            b.embed(|e| {
+                embed_passes(&ctx, e, noaa_15_passes, days);
+                e
+            })
+            .ephemeral(false);
+        }
 
-        b.embed(|e| {
-            embed_passes(&ctx, e, noaa_18_passes, days);
-            e
-        })
-        .ephemeral(false);
+        if !noaa_18_passes.passes.is_empty() {
+            b.embed(|e| {
+                embed_passes(&ctx, e, noaa_18_passes, days);
+                e
+            })
+            .ephemeral(false);
+        }
 
-        b.embed(|e| {
-            embed_passes(&ctx, e, noaa_19_passes, days);
-            e
-        })
-        .ephemeral(false);
+        if !noaa_19_passes.passes.is_empty() {
+            b.embed(|e| {
+                embed_passes(&ctx, e, noaa_19_passes, days);
+                e
+            })
+            .ephemeral(false);
+        }
 
         b
     })
