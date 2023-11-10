@@ -42,14 +42,25 @@ pub async fn get_upcoming_passes(
         .get_satellite_passes(satellite_id, &location, days, min_max_elevation)
         .await?;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            embed_passes(&ctx, e, passes, days);
-            e
+    if !passes.passes.is_empty() {
+        ctx.send(|b| {
+            b.embed(|e| {
+                embed_passes(&ctx, e, passes, days);
+                e
+            })
+            .ephemeral(false)
         })
-        .ephemeral(false)
-    })
-    .await?;
+        .await?;
+    } else {
+        ctx.send(|m| {
+            m.embed(|e| {
+                e.title("No passes found");
+                e
+            })
+            .ephemeral(false)
+        })
+        .await?;
+    }
 
     Ok(())
 }
@@ -103,6 +114,21 @@ pub async fn get_upcoming_noaa_passes(
         .get_satellite_passes(33591, &location, days, min_max_elevation)
         .await?;
 
+    if noaa_15_passes.passes.is_empty()
+        && noaa_18_passes.passes.is_empty()
+        && noaa_19_passes.passes.is_empty()
+    {
+        ctx.send(|m| {
+            m.embed(|e| {
+                e.title("No passes found");
+                e
+            })
+            .ephemeral(false)
+        })
+        .await?;
+        return Ok(());
+    }
+    
     ctx.send(|b| {
         b.embed(|e| {
             embed_passes(&ctx, e, noaa_15_passes, days);
