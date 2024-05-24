@@ -70,7 +70,7 @@ pub async fn watch_satellite(
         satellite_id: SatelliteId(satellite_id),
         channel: Snowflake(ctx.channel_id().0),
         watcher: Snowflake(ctx.author().id.0),
-        locale: ctx.locale().unwrap_or("en-GB").to_string(),
+        __legacy_locale: ctx.locale().unwrap_or("en-GB").to_string(),
         location: LocationName(location.name.0.clone()),
         name: name.clone(),
         min_max_elevation,
@@ -257,7 +257,6 @@ pub async fn notify_of_new_passes(
                     e.description(format!(
                         "{}\nMax Elevation: {}°",
                         util::format_pass_time(
-                            &watched_satellite.locale,
                             pass.start_utc as i64,
                             pass.end_utc as i64
                         ),

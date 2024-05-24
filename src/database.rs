@@ -73,7 +73,8 @@ pub struct WatchedSatellite {
     pub location: LocationName,
     pub channel: Snowflake,
     pub watcher: Snowflake,
-    pub locale: String,
+    #[serde(rename = "locale")]
+    pub __legacy_locale: String,
     pub min_max_elevation: f64,
     pub previous_notifications: Vec<(usize, usize)>,
 }

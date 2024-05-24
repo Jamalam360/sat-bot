@@ -45,7 +45,7 @@ pub async fn get_upcoming_passes(
     if !passes.passes.is_empty() {
         ctx.send(|b| {
             b.embed(|e| {
-                embed_passes(&ctx, e, passes, days);
+                embed_passes(e, passes, days);
                 e
             })
             .ephemeral(false)
@@ -132,7 +132,7 @@ pub async fn get_upcoming_noaa_passes(
     ctx.send(|b| {
         if !noaa_15_passes.passes.is_empty() {
             b.embed(|e| {
-                embed_passes(&ctx, e, noaa_15_passes, days);
+                embed_passes(e, noaa_15_passes, days);
                 e
             })
             .ephemeral(false);
@@ -140,7 +140,7 @@ pub async fn get_upcoming_noaa_passes(
 
         if !noaa_18_passes.passes.is_empty() {
             b.embed(|e| {
-                embed_passes(&ctx, e, noaa_18_passes, days);
+                embed_passes(e, noaa_18_passes, days);
                 e
             })
             .ephemeral(false);
@@ -148,7 +148,7 @@ pub async fn get_upcoming_noaa_passes(
 
         if !noaa_19_passes.passes.is_empty() {
             b.embed(|e| {
-                embed_passes(&ctx, e, noaa_19_passes, days);
+                embed_passes(e, noaa_19_passes, days);
                 e
             })
             .ephemeral(false);

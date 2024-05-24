@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use anyhow::Context as _;
-use chrono::FixedOffset;
 use tracing::info;
 
 pub fn load_env_file() -> anyhow::Result<()> {
@@ -28,35 +27,11 @@ pub fn env(name: &str) -> anyhow::Result<String> {
     std::env::var(name).with_context(|| format!("missing environment variable {}", name))
 }
 
-pub fn utc_to_local(locale: &str, utc: i64) -> String {
-    let local = chrono::DateTime::from_timestamp(utc, 0)
-        .unwrap()
-        .with_timezone(&locale_to_timezone(locale));
-    local.format("%H:%M").to_string()
-}
-
-/// Imperfect, but good enough for my usecase.
-fn locale_to_timezone(locale: &str) -> FixedOffset {
-    match locale {
-        "en-US" => chrono::FixedOffset::east_opt(5 * 3600),
-        "en-GB" => chrono::FixedOffset::east_opt(0),
-        "en-AU" => chrono::FixedOffset::east_opt(10 * 3600),
-        _ => chrono::FixedOffset::east_opt(0),
-    }
-    .unwrap()
-}
-
-pub fn format_pass_time(locale: &str, start: i64, end: i64) -> String {
-    let start_timestamp = chrono::DateTime::from_timestamp(start, 0)
-        .unwrap()
-        .with_timezone(&locale_to_timezone(locale));
-
+pub fn format_pass_time(start: i64, end: i64) -> String {
     format!(
-        "{} {} {} - {} ({})",
-        start_timestamp.format("%A"),
-        start_timestamp.format("%d/%m/%y"),
-        utc_to_local(locale, start),
-        utc_to_local(locale, end),
+        "<t:{}> - <t:{}:t> ({})",
+        start,
+        end,
         duration_between(start, end)
     )
 }

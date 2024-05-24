@@ -10,7 +10,7 @@ pub use watch::*;
 
 use crate::{n2yo::SatellitePasses, util, Context};
 
-pub fn embed_passes(ctx: &Context<'_>, e: &mut CreateEmbed, passes: SatellitePasses, days: usize) {
+pub fn embed_passes(e: &mut CreateEmbed, passes: SatellitePasses, days: usize) {
     e.title(format!(
         "Upcoming passes for {} in the next {} days",
         passes.info.name, days
@@ -18,7 +18,6 @@ pub fn embed_passes(ctx: &Context<'_>, e: &mut CreateEmbed, passes: SatellitePas
     e.fields(passes.passes.iter().map(|pass| {
         (
             util::format_pass_time(
-                ctx.locale().unwrap_or("en-GB"),
                 pass.start_utc as i64,
                 pass.end_utc as i64,
             ),
