@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use poise::command;
 use poise::serenity_prelude::Channel;
+use poise::{command, CreateReply};
+use serenity::all::{ChannelId, CreateEmbed};
 use serenity::builder::CreateMessage;
 use serenity::http::Http;
-use serenity::json::Value;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -42,7 +42,7 @@ pub async fn watch_satellite(
             watched_satellite.satellite_id.0 == satellite_id
                 && watched_satellite.location.0 == location
                 && watched_satellite.min_max_elevation == min_max_elevation
-                && watched_satellite.channel.0 == ctx.channel_id().0
+                && watched_satellite.channel.0 == ctx.channel_id().get()
         })
     {
         return Err(anyhow::anyhow!(
@@ -68,8 +68,8 @@ pub async fn watch_satellite(
 
     database.contents.watched_satellites.push(WatchedSatellite {
         satellite_id: SatelliteId(satellite_id),
-        channel: Snowflake(ctx.channel_id().0),
-        watcher: Snowflake(ctx.author().id.0),
+        channel: Snowflake(ctx.channel_id().get()),
+        watcher: Snowflake(ctx.author().id.get()),
         __legacy_locale: ctx.locale().unwrap_or("en-GB").to_string(),
         location: LocationName(location.name.0.clone()),
         name: name.clone(),
@@ -78,20 +78,21 @@ pub async fn watch_satellite(
     });
     database.save()?;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Satellite watched");
-            e.description(format!(
-                "{} with a minimum elevation of {}° at {} by {}",
-                name,
-                min_max_elevation,
-                location.name.0,
-                ctx.author().name,
-            ));
-            e
-        })
-        .ephemeral(false)
-    })
+    ctx.send(
+        CreateReply::default()
+            .embed(
+                CreateEmbed::new()
+                    .title("Satellite watched")
+                    .description(format!(
+                        "{} with a minimum elevation of {}° at {} by {}",
+                        name,
+                        min_max_elevation,
+                        location.name.0,
+                        ctx.author().name,
+                    )),
+            )
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())
@@ -103,31 +104,31 @@ pub async fn list_watched_satellites(ctx: Context<'_>) -> anyhow::Result<()> {
     ctx.defer().await?;
 
     let database = ctx.data().database.read().await;
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Watched satellites");
-            e.fields(
-                database
-                    .contents
-                    .watched_satellites
-                    .iter()
-                    .map(|watched_satellite| {
-                        (
-                            watched_satellite.name.clone(),
-                            format!(
-                                "Channel: {}\nLocation: {}\nMinimum Elevation: {}°",
-                                watched_satellite.channel.0,
-                                watched_satellite.location.0,
-                                watched_satellite.min_max_elevation
-                            ),
-                            false,
-                        )
-                    }),
-            );
-            e
-        })
-        .ephemeral(false)
-    })
+
+    ctx.send(
+        CreateReply::default()
+            .embed(
+                CreateEmbed::new().title("Watched Satellites").fields(
+                    database
+                        .contents
+                        .watched_satellites
+                        .iter()
+                        .map(|watched_satellite| {
+                            (
+                                watched_satellite.name.clone(),
+                                format!(
+                                    "Channel: {}\nLocation: {}\nMinimum Elevation: {}°",
+                                    watched_satellite.channel.0,
+                                    watched_satellite.location.0,
+                                    watched_satellite.min_max_elevation
+                                ),
+                                false,
+                            )
+                        }),
+                ),
+            )
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())
@@ -153,12 +154,12 @@ pub async fn unwatch_satellite(
         .iter()
         .position(|watched_satellite| {
             watched_satellite.satellite_id.0 == satellite_id
-                && watched_satellite.channel.0 == channel.id().0
+                && watched_satellite.channel.0 == channel.id().get()
                 && watched_satellite.location.0 == location
         })
         .ok_or_else(|| anyhow::anyhow!("no such watched satellite"))?;
 
-    if ctx.author().id.0 != database.contents.watched_satellites[index].watcher.0 {
+    if ctx.author().id.get() != database.contents.watched_satellites[index].watcher.0 {
         return Err(anyhow::anyhow!(
             "watched satellite must be removed by its watcher"
         ));
@@ -167,18 +168,19 @@ pub async fn unwatch_satellite(
     database.contents.watched_satellites.remove(index);
     database.save()?;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Watched satellite removed");
-            e.description(format!(
-                "{} ({})",
-                database.contents.watched_satellites[index].name,
-                ctx.author().name
-            ));
-            e
-        })
-        .ephemeral(false)
-    })
+    ctx.send(
+        CreateReply::default()
+            .embed(
+                CreateEmbed::new()
+                    .title("Watched Satellite Removed")
+                    .description(format!(
+                        "{} ({})",
+                        database.contents.watched_satellites[index].name,
+                        ctx.author().name
+                    )),
+            )
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())
@@ -227,7 +229,7 @@ pub async fn notify_of_new_passes(
             continue;
         }
 
-        let mut b = CreateMessage::default();
+        let mut builder = CreateMessage::default();
 
         for pass in passes.passes.iter() {
             if pass.max_elevation >= watched_satellite.min_max_elevation {
@@ -248,32 +250,27 @@ pub async fn notify_of_new_passes(
                     ));
                 }
 
-                b.add_embed(|e| {
-                    e.title(format!(
-                        "Upcoming pass for {} at {}",
-                        passes.info.name, watched_satellite.location.0
-                    ));
-
-                    e.description(format!(
-                        "{}\nMax Elevation: {}°",
-                        util::format_pass_time(
-                            pass.start_utc as i64,
-                            pass.end_utc as i64
-                        ),
-                        pass.max_elevation
-                    ));
-                    e
-                });
+                builder = builder.add_embed(
+                    CreateEmbed::new()
+                        .title(format!(
+                            "Upcoming pass for {} at {}",
+                            passes.info.name, watched_satellite.location.0
+                        ))
+                        .description(format!(
+                            "{}\nMax Elevation: {}°",
+                            util::format_pass_time(pass.start_utc as i64, pass.end_utc as i64),
+                            pass.max_elevation
+                        )),
+                );
             }
         }
 
-        let mut map = serde_json::Map::new();
-        for (key, value) in b.0 {
-            map.insert(key.to_string(), value);
-        }
-
-        http.send_message(watched_satellite.channel.0, &Value::Object(map))
-            .await?;
+        http.send_message(
+            ChannelId::new(watched_satellite.channel.0),
+            vec![],
+            &builder,
+        )
+        .await?;
     }
 
     for successful in successful_notifications.iter() {

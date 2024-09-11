@@ -1,4 +1,5 @@
-use poise::command;
+use poise::{command, CreateReply};
+use serenity::all::CreateEmbed;
 
 use crate::commands::{autocomplete, embed_passes, Context};
 
@@ -43,22 +44,18 @@ pub async fn get_upcoming_passes(
         .await?;
 
     if !passes.passes.is_empty() {
-        ctx.send(|b| {
-            b.embed(|e| {
-                embed_passes(e, passes, days);
-                e
-            })
-            .ephemeral(false)
-        })
+        ctx.send(
+            CreateReply::default()
+                .embed(embed_passes(passes, days))
+                .ephemeral(false),
+        )
         .await?;
     } else {
-        ctx.send(|m| {
-            m.embed(|e| {
-                e.title("No passes found");
-                e
-            })
-            .ephemeral(false)
-        })
+        ctx.send(
+            CreateReply::default()
+                .embed(CreateEmbed::new().title("No passes found"))
+                .ephemeral(false),
+        )
         .await?;
     }
 
@@ -118,45 +115,30 @@ pub async fn get_upcoming_noaa_passes(
         && noaa_18_passes.passes.is_empty()
         && noaa_19_passes.passes.is_empty()
     {
-        ctx.send(|m| {
-            m.embed(|e| {
-                e.title("No passes found");
-                e
-            })
-            .ephemeral(false)
-        })
+        ctx.send(
+            CreateReply::default()
+                .embed(CreateEmbed::new().title("No passes found"))
+                .ephemeral(false),
+        )
         .await?;
         return Ok(());
     }
 
-    ctx.send(|b| {
-        if !noaa_15_passes.passes.is_empty() {
-            b.embed(|e| {
-                embed_passes(e, noaa_15_passes, days);
-                e
-            })
-            .ephemeral(false);
-        }
+    let mut reply = CreateReply::default().ephemeral(false);
 
-        if !noaa_18_passes.passes.is_empty() {
-            b.embed(|e| {
-                embed_passes(e, noaa_18_passes, days);
-                e
-            })
-            .ephemeral(false);
-        }
+    if !noaa_15_passes.passes.is_empty() {
+        reply = reply.embed(embed_passes(noaa_15_passes, days));
+    }
 
-        if !noaa_19_passes.passes.is_empty() {
-            b.embed(|e| {
-                embed_passes(e, noaa_19_passes, days);
-                e
-            })
-            .ephemeral(false);
-        }
+    if !noaa_18_passes.passes.is_empty() {
+        reply = reply.embed(embed_passes(noaa_18_passes, days));
+    }
 
-        b
-    })
-    .await?;
+    if !noaa_19_passes.passes.is_empty() {
+        reply = reply.embed(embed_passes(noaa_19_passes, days));
+    }
+
+    ctx.send(reply).await?;
 
     Ok(())
 }

@@ -1,4 +1,5 @@
-use poise::command;
+use poise::{command, CreateReply};
+use serenity::all::CreateEmbed;
 
 use crate::{
     commands::autocomplete,
@@ -29,7 +30,7 @@ pub async fn add_location(
 
     let location = Location {
         name: LocationName(name.clone()),
-        creator: Snowflake(ctx.author().id.0),
+        creator: Snowflake(ctx.author().id.get()),
         latitude,
         longitude,
         altitude,
@@ -38,14 +39,15 @@ pub async fn add_location(
     database.contents.locations.push(location);
     database.save()?;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Location added");
-            e.description(format!("{} ({})", name, ctx.author().name));
-            e
-        })
-        .ephemeral(false)
-    })
+    ctx.send(
+        CreateReply::default()
+            .embed(
+                CreateEmbed::new()
+                    .title("Location added")
+                    .description(format!("{} ({})", name, ctx.author().name)),
+            )
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())
@@ -57,23 +59,22 @@ pub async fn list_locations(ctx: Context<'_>) -> anyhow::Result<()> {
     ctx.defer().await?;
     let database = ctx.data().database.read().await;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Locations");
-            e.fields(database.contents.locations.iter().map(|location| {
-                (
-                    location.name.0.clone(),
-                    format!(
-                        "{}°N {}°E @ {}m",
-                        location.latitude, location.longitude, location.altitude
-                    ),
-                    false,
-                )
-            }));
-            e
-        })
-        .ephemeral(false)
-    })
+    ctx.send(
+        CreateReply::default()
+            .embed(CreateEmbed::new().title("Locations").fields(
+                database.contents.locations.iter().map(|location| {
+                    (
+                        location.name.0.clone(),
+                        format!(
+                            "{}°N {}°E @ {}m",
+                            location.latitude, location.longitude, location.altitude
+                        ),
+                        false,
+                    )
+                }),
+            ))
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())
@@ -96,21 +97,22 @@ pub async fn remove_location(
         .position(|location| location.name.0 == name)
         .ok_or_else(|| anyhow::anyhow!("no such location"))?;
 
-    if ctx.author().id.0 != database.contents.locations[index].creator.0 {
+    if ctx.author().id.get() != database.contents.locations[index].creator.0 {
         return Err(anyhow::anyhow!("location must be removed by its creator"));
     }
 
     database.contents.locations.remove(index);
     database.save()?;
 
-    ctx.send(|b| {
-        b.embed(|e| {
-            e.title("Location removed");
-            e.description(format!("{}, created by {}", name, ctx.author().name));
-            e
-        })
-        .ephemeral(false)
-    })
+    ctx.send(
+        CreateReply::default()
+            .embed(
+                CreateEmbed::new()
+                    .title("Location removed")
+                    .description(format!("{}, created by {}", name, ctx.author().name)),
+            )
+            .ephemeral(false),
+    )
     .await?;
 
     Ok(())

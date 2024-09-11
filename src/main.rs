@@ -2,8 +2,11 @@ use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 
 use database::Database;
 use n2yo::N2YOAPI;
-use poise::{serenity_prelude::GuildId, FrameworkError};
-use serenity::prelude::*;
+use poise::{serenity_prelude::GuildId, CreateReply, FrameworkError};
+use serenity::{
+    all::{ClientBuilder, CreateEmbed},
+    prelude::*,
+};
 use tokio::{spawn, sync::RwLock, time::interval};
 use tracing::{error, info};
 
@@ -48,25 +51,29 @@ async fn main() -> anyhow::Result<()> {
             on_error,
             ..Default::default()
         })
-        .token(util::env("DISCORD_TOKEN")?)
-        .intents(GatewayIntents::non_privileged())
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 info!("Registering commands");
                 poise::builtins::register_in_guild::<ApplicationContext, anyhow::Error>(
                     ctx,
                     &framework.options().commands,
-                    GuildId(util::env("GUILD_ID")?.parse()?),
+                    GuildId::new(util::env("GUILD_ID")?.parse()?),
                 )
                 .await?;
 
                 Ok(app_ctx)
             })
         })
-        .build()
-        .await?;
+        .build();
 
-    let http = framework.client().cache_and_http.http.clone();
+    let mut client = ClientBuilder::new(
+        util::env("DISCORD_TOKEN")?,
+        GatewayIntents::non_privileged(),
+    )
+    .framework(framework)
+    .await?;
+
+    let http = client.http.clone();
 
     spawn(async move {
         let mut interval = interval(Duration::from_secs(60 * 30));
@@ -80,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     info!("Starting bot");
-    framework.start().await?;
+    client.start().await?;
 
     Ok(())
 }
@@ -132,14 +139,15 @@ fn on_error<'a>(
 
         if let Some(ctx) = framework_error.ctx() {
             let _ = ctx
-                .send(|b| {
-                    b.embed(|e| {
-                        e.title("An error occurred");
-                        e.description(message.unwrap_or("Unknown error".to_string()));
-                        e
-                    })
-                    .ephemeral(false)
-                })
+                .send(
+                    CreateReply::default()
+                        .embed(
+                            CreateEmbed::new()
+                                .title("An error occurred")
+                                .description(message.unwrap_or("Unknown error".to_string())),
+                        )
+                        .ephemeral(false),
+                )
                 .await;
         }
     })
